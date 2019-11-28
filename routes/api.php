@@ -20,8 +20,10 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 // public routes
 Route::post('/login', 'Api\AuthController@login')->name('login.api');
 Route::post('/register', 'Api\AuthController@register')->name('register.api');
-
 // private routes
 Route::middleware('auth:api')->group(function () {
     Route::post('/logout', 'Api\AuthController@logout')->name('logout');
+    Route::post('/profile', 'Api\AuthController@profile')->name('profile');
+    Route::post('/updateProfile', 'Api\AuthController@updateProfile')->name('profile.update');
+
 });

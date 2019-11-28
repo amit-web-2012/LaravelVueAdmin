@@ -14,8 +14,8 @@
         <div class="image">
           <img src="../../img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
         </div>
-        <div class="info">{{userName}}
-          <!-- <router-link :to="{ name: 'profile', params: { id: authUser.id}}">{{authUser.name}}</router-link> -->
+        <div class="info">
+          <router-link :to="{ name: 'profile', params: { id: id}}">{{userName}} </router-link>
         </div>
       </div>
 
@@ -64,13 +64,24 @@
         name:"LeftMenu",
         data() {
             return {
+                id: '',
                 userName: ''
             }
         },
-        props: ['authUser'],
+        // computed : {
+        //     loggedInUserName() {
+        //         return this.$store.getters.loggedUserName;
+        //     },
+        //     loggedInUserId() {
+        //         return this.$store.getters.loggedUserId;
+        //     }
+        // }
         mounted() {
-            console.log(this.$store.state);
-            this.userName = this.$store.state.name;
+            this.userName = this.$store.getters.loggedUserName;
+            this.id = this.$store.state.id;
+        },
+        watch: {
+
         }
     }
 </script>

@@ -41,7 +41,6 @@
     export default {
         name:"Navbar",
         mounted() {
-            console.log('Navbar')
         }
     }
 </script>

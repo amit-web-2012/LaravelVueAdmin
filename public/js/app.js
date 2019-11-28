@@ -2157,14 +2157,23 @@ __webpack_require__.r(__webpack_exports__);
   name: "LeftMenu",
   data: function data() {
     return {
+      id: '',
       userName: ''
     };
   },
-  props: ['authUser'],
+  // computed : {
+  //     loggedInUserName() {
+  //         return this.$store.getters.loggedUserName;
+  //     },
+  //     loggedInUserId() {
+  //         return this.$store.getters.loggedUserId;
+  //     }
+  // }
   mounted: function mounted() {
-    console.log(this.$store.state);
-    this.userName = this.$store.state.name;
-  }
+    this.userName = this.$store.getters.loggedUserName;
+    this.id = this.$store.state.id;
+  },
+  watch: {}
 });
 
 /***/ }),
@@ -2362,9 +2371,7 @@ __webpack_require__.r(__webpack_exports__);
 //
 /* harmony default export */ __webpack_exports__["default"] = ({
   name: "Navbar",
-  mounted: function mounted() {
-    console.log('Navbar');
-  }
+  mounted: function mounted() {}
 });
 
 /***/ }),
@@ -2423,6 +2430,7 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
 /* harmony default export */ __webpack_exports__["default"] = ({
   name: 'Profile',
   data: function data() {
@@ -2430,24 +2438,80 @@ __webpack_require__.r(__webpack_exports__);
       user: {
         id: this.$route.params.id,
         name: '',
-        email: ''
+        email: '',
+        imageData: ''
       },
-      csrf: document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      submitted: false
     };
   },
   mounted: function mounted() {
-    axios.get('/profile/' + this.user.id).then(function (response) {
-      if (response.status === 302 || 401) {
-        console.log(response.status);
-      } else {// throw error and go to catch block
-      }
-    })["catch"](function (error) {
-      console.log(error);
+    var _this = this;
+
+    return new Promise(function (resolve, reject) {
+      axios.post('/profile', {
+        id: _this.user.id
+      }).then(function (response) {
+        console.log(response.data.responseData);
+        _this.user.name = response.data.responseData.name;
+        _this.user.email = response.data.responseData.email;
+        _this.user.imageData = response.data.responseData.profle_image;
+        resolve(response);
+      })["catch"](function (error) {
+        reject(error);
+      });
     });
   },
   methods: {
+    previewImage: function previewImage(event) {
+      var _this2 = this;
+
+      // Reference to the DOM input element
+      var input = event.target; // Ensure that you have a file before attempting to read it
+
+      if (input.files && input.files[0]) {
+        // create a new FileReader to read this image and convert to base64 format
+        var reader = new FileReader(); // Define a callback function to run, when FileReader finishes its job
+
+        reader.onload = function (e) {
+          // Note: arrow function used here, so that "this.imageData" refers to the imageData of Vue component
+          // Read image as base64 and set to imageData
+          _this2.user.imageData = e.target.result;
+        }; // Start the reader job - read file as a data url (base64 format)
+
+
+        reader.readAsDataURL(input.files[0]);
+      }
+    },
     profileUpdate: function profileUpdate() {
-      console.log("Submit");
+      var _this3 = this;
+
+      this.submitted = true;
+      this.$validator.validate().then(function (valid) {
+        if (valid) {
+          var formData = new FormData();
+          formData.append('id', _this3.user.id);
+          formData.append('name', _this3.user.name);
+          formData.append('profile_image', _this3.$refs.profileImage.files[0]);
+          return new Promise(function (resolve, reject) {
+            axios.post('/updateProfile', formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data'
+              }
+            }).then(function (response) {
+              var responseData = response.data.responseData;
+              localStorage.setItem('myname', responseData.name);
+              localStorage.setItem('email', responseData.email);
+              localStorage.setItem('profile_image', responseData.profile_image);
+
+              _this3.$store.commit('updateProfile', responseData);
+
+              resolve(response);
+            })["catch"](function (error) {
+              reject(error);
+            });
+          });
+        }
+      });
     }
   }
 });
@@ -45213,9 +45277,18 @@ var render = function() {
         _c("div", { staticClass: "user-panel mt-3 pb-3 mb-3 d-flex" }, [
           _vm._m(1),
           _vm._v(" "),
-          _c("div", { staticClass: "info" }, [
-            _vm._v(_vm._s(_vm.userName) + "\n        ")
-          ])
+          _c(
+            "div",
+            { staticClass: "info" },
+            [
+              _c(
+                "router-link",
+                { attrs: { to: { name: "profile", params: { id: _vm.id } } } },
+                [_vm._v(_vm._s(_vm.userName) + " ")]
+              )
+            ],
+            1
+          )
         ]),
         _vm._v(" "),
         _vm._m(2)
@@ -45738,160 +45811,164 @@ var render = function() {
     _c("div", { staticClass: "card card-primary" }, [
       _c("div", { staticClass: "card-header" }, [
         _c("h3", { staticClass: "card-title" }, [
-          _vm._v("Admin Profile " + _vm._s(_vm.user.id))
+          _vm._v(_vm._s(_vm.user.name) + " Profile")
         ])
       ]),
       _vm._v(" "),
-      _c("div", { staticClass: "card-body" }, [
-        _c("div", { staticClass: "form-group" }, [
-          _c("label", { attrs: { for: "formName" } }, [_vm._v("Name")]),
-          _vm._v(" "),
-          _c("input", {
-            directives: [
-              {
-                name: "model",
-                rawName: "v-model",
-                value: _vm.user.name,
-                expression: "user.name"
-              }
-            ],
-            staticClass: "form-control",
-            attrs: {
-              type: "text",
-              value: "{user.name}",
-              id: "formName",
-              placeholder: "Enter Name"
-            },
-            domProps: { value: _vm.user.name },
-            on: {
-              input: function($event) {
-                if ($event.target.composing) {
-                  return
-                }
-                _vm.$set(_vm.user, "name", $event.target.value)
-              }
+      _c(
+        "form",
+        {
+          attrs: { enctype: "multipart/form-data" },
+          on: {
+            submit: function($event) {
+              $event.preventDefault()
+              return _vm.profileUpdate($event)
             }
-          })
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "form-group" }, [
-          _c("label", { attrs: { for: "exampleInputEmail1" } }, [
-            _vm._v("Email")
+          }
+        },
+        [
+          _c("div", { staticClass: "card-body" }, [
+            _c("div", { staticClass: "form-group" }, [
+              _c("label", { attrs: { for: "formName" } }, [_vm._v("Name")]),
+              _vm._v(" "),
+              _c("input", {
+                directives: [
+                  {
+                    name: "model",
+                    rawName: "v-model",
+                    value: _vm.user.name,
+                    expression: "user.name"
+                  },
+                  {
+                    name: "validate",
+                    rawName: "v-validate",
+                    value: "required",
+                    expression: "'required'"
+                  }
+                ],
+                staticClass: "form-control",
+                class: {
+                  "is-invalid": _vm.submitted && _vm.errors.has("name")
+                },
+                attrs: {
+                  type: "text",
+                  name: "name",
+                  id: "name",
+                  value: "{user.name}",
+                  placeholder: "Enter Name"
+                },
+                domProps: { value: _vm.user.name },
+                on: {
+                  input: function($event) {
+                    if ($event.target.composing) {
+                      return
+                    }
+                    _vm.$set(_vm.user, "name", $event.target.value)
+                  }
+                }
+              }),
+              _vm._v(" "),
+              _vm.submitted && _vm.errors.has("name")
+                ? _c("p", { staticClass: "invalid-feedback" }, [
+                    _vm._v(
+                      "\n            " +
+                        _vm._s(_vm.errors.first("name")) +
+                        "\n        "
+                    )
+                  ])
+                : _vm._e()
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "form-group" }, [
+              _c("label", { attrs: { for: "exampleInputEmail1" } }, [
+                _vm._v("Email")
+              ]),
+              _vm._v(" "),
+              _c("input", {
+                directives: [
+                  {
+                    name: "model",
+                    rawName: "v-model",
+                    value: _vm.user.email,
+                    expression: "user.email"
+                  }
+                ],
+                staticClass: "form-control",
+                attrs: {
+                  type: "email",
+                  value: "{user.email}",
+                  id: "formEmail",
+                  disabled: ""
+                },
+                domProps: { value: _vm.user.email },
+                on: {
+                  input: function($event) {
+                    if ($event.target.composing) {
+                      return
+                    }
+                    _vm.$set(_vm.user, "email", $event.target.value)
+                  }
+                }
+              })
+            ]),
+            _vm._v("\n        " + _vm._s(_vm.user) + "\n        "),
+            _vm.user.imageData
+              ? _c("div", { staticClass: "form-group image-cropper" }, [
+                  _c("img", {
+                    staticClass: "profile-pic",
+                    attrs: { src: _vm.user.imageData, alt: "User Image" }
+                  })
+                ])
+              : _vm._e(),
+            _vm._v(" "),
+            _c("div", { staticClass: "form-group" }, [
+              _c("label", { attrs: { for: "exampleInputFile" } }, [
+                _vm._v("Profile Image")
+              ]),
+              _vm._v(" "),
+              _c("div", { staticClass: "input-group" }, [
+                _c("div", { staticClass: "custom-file" }, [
+                  _c("input", {
+                    ref: "profileImage",
+                    staticClass: "custom-file-input",
+                    attrs: {
+                      type: "file",
+                      id: "profileImage",
+                      accept: "image/*"
+                    },
+                    on: { change: _vm.previewImage }
+                  }),
+                  _vm._v(" "),
+                  _c(
+                    "label",
+                    {
+                      staticClass: "custom-file-label",
+                      attrs: { for: "exampleInputFile" }
+                    },
+                    [_vm._v("Choose file")]
+                  )
+                ])
+              ])
+            ])
           ]),
           _vm._v(" "),
-          _c("input", {
-            directives: [
+          _c("div", { staticClass: "card-footer" }, [
+            _c(
+              "button",
               {
-                name: "model",
-                rawName: "v-model",
-                value: _vm.user.email,
-                expression: "user.email"
-              }
-            ],
-            staticClass: "form-control",
-            attrs: {
-              type: "email",
-              value: "{user.email}",
-              id: "formEmail",
-              disabled: ""
-            },
-            domProps: { value: _vm.user.email },
-            on: {
-              input: function($event) {
-                if ($event.target.composing) {
-                  return
-                }
-                _vm.$set(_vm.user, "email", $event.target.value)
-              }
-            }
-          })
-        ]),
-        _vm._v(" "),
-        _vm._m(0),
-        _vm._v(" "),
-        _vm._m(1),
-        _vm._v(" "),
-        _vm._m(2)
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "card-footer" }, [
-        _c(
-          "button",
-          {
-            staticClass: "btn btn-primary",
-            attrs: { type: "button" },
-            on: { click: _vm.profileUpdate }
-          },
-          [_vm._v("Submit")]
-        )
-      ])
+                staticClass: "btn btn-primary",
+                attrs: { type: "button" },
+                on: { click: _vm.profileUpdate }
+              },
+              [_vm._v("Submit")]
+            )
+          ])
+        ]
+      )
     ])
   ])
 }
-var staticRenderFns = [
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("div", { staticClass: "form-group" }, [
-      _c("label", { attrs: { for: "exampleInputPassword1" } }, [
-        _vm._v("Password")
-      ]),
-      _vm._v(" "),
-      _c("input", {
-        staticClass: "form-control",
-        attrs: { type: "password", id: "formPassword", placeholder: "Password" }
-      })
-    ])
-  },
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("div", { staticClass: "form-group" }, [
-      _c("label", { attrs: { for: "exampleInputPassword1" } }, [
-        _vm._v("Confirm Password")
-      ]),
-      _vm._v(" "),
-      _c("input", {
-        staticClass: "form-control",
-        attrs: {
-          type: "password",
-          id: "formConfirmPassword",
-          placeholder: "Confirm Password"
-        }
-      })
-    ])
-  },
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("div", { staticClass: "form-group" }, [
-      _c("label", { attrs: { for: "exampleInputFile" } }, [
-        _vm._v("Profile Image")
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "input-group" }, [
-        _c("div", { staticClass: "custom-file" }, [
-          _c("input", {
-            staticClass: "custom-file-input",
-            attrs: { type: "file", id: "exampleInputFile" }
-          }),
-          _vm._v(" "),
-          _c(
-            "label",
-            {
-              staticClass: "custom-file-label",
-              attrs: { for: "exampleInputFile" }
-            },
-            [_vm._v("Choose file")]
-          )
-        ])
-      ])
-    ])
-  }
-]
+var staticRenderFns = []
 render._withStripped = true
 
 
@@ -62384,6 +62461,9 @@ window.Vue = __webpack_require__(/*! vue */ "./node_modules/vue/dist/vue.common.
 
 
 
+axios.defaults.baseURL = 'http://127.0.0.1:8000/api';
+console.log("NEW");
+console.log(_stote__WEBPACK_IMPORTED_MODULE_3__["default"].getters.token);
 Vue.use(vue_router__WEBPACK_IMPORTED_MODULE_1__["default"]);
 Vue.use(vee_validate__WEBPACK_IMPORTED_MODULE_0__["default"]);
 var router = new vue_router__WEBPACK_IMPORTED_MODULE_1__["default"]({
@@ -63271,27 +63351,31 @@ __webpack_require__.r(__webpack_exports__);
 
 
 vue__WEBPACK_IMPORTED_MODULE_1___default.a.use(vuex__WEBPACK_IMPORTED_MODULE_0__["default"]);
-axios__WEBPACK_IMPORTED_MODULE_2___default.a.defaults.baseURL = 'http://127.0.0.1:8000/api';
 /* harmony default export */ __webpack_exports__["default"] = (new vuex__WEBPACK_IMPORTED_MODULE_0__["default"].Store({
   state: {
+    id: localStorage.getItem('id') || null,
     token: localStorage.getItem('token') || null,
     myname: localStorage.getItem('myname') || null,
     email: localStorage.getItem('email') || null,
+    profile_image: localStorage.getItem('profile_image') || null,
     errorMessage: ''
   },
   mutations: {
     retrieveToken: function retrieveToken(state, responseData) {
-      state.token = responseData.token, state.myname = responseData.name, state.email = responseData.email;
+      console.log(responseData);
+      state.id = responseData.id, state.token = responseData.token, state.myname = responseData.username, state.email = responseData.email, state.profile_image = responseData.profile_image;
     },
     registerUser: function registerUser(state, responseData) {
-      state.token = responseData.token, state.name = responseData.name, state.email = responseData.email;
+      state.id = responseData.id, state.token = responseData.token, state.myname = responseData.username, state.email = responseData.email;
     },
     errorToken: function errorToken(state, errorMessage) {
       state.errorMessage = errorMessage;
     },
     destroyToken: function destroyToken(state) {
-      state.token = null, state.name = null, state.email = null;
-      console.log("STATE", null);
+      state.id = null, state.token = null, state.myname = null, state.email = null, state.profile_image = null;
+    },
+    updateProfile: function updateProfile(state, responseData) {
+      state.myname = responseData.name, state.profile_image = responseData.profile_image;
     }
   },
   actions: {
@@ -63302,9 +63386,11 @@ axios__WEBPACK_IMPORTED_MODULE_2___default.a.defaults.baseURL = 'http://127.0.0.
           password: credentials.password
         }).then(function (response) {
           var responseData = response.data.responseData;
+          localStorage.setItem('id', responseData.id);
           localStorage.setItem('token', responseData.token);
-          localStorage.setItem('myname', responseData.name);
+          localStorage.setItem('myname', responseData.username);
           localStorage.setItem('email', responseData.email);
+          localStorage.setItem('profile_image', responseData.profile_image);
           context.commit('retrieveToken', responseData);
           resolve(response);
         })["catch"](function (error) {
@@ -63323,9 +63409,11 @@ axios__WEBPACK_IMPORTED_MODULE_2___default.a.defaults.baseURL = 'http://127.0.0.
           password_confirmation: credentials.confirm_password
         }).then(function (response) {
           var responseData = response.data.responseData;
+          localStorage.setItem('id', responseData.id);
           localStorage.setItem('token', responseData.token);
-          localStorage.setItem('myname', responseData.name);
+          localStorage.setItem('myname', responseData.username);
           localStorage.setItem('email', responseData.email);
+          localStorage.setItem('profile_image', '');
           context.commit('registerUser', responseData);
           resolve(response);
         })["catch"](function (error) {
@@ -63340,15 +63428,19 @@ axios__WEBPACK_IMPORTED_MODULE_2___default.a.defaults.baseURL = 'http://127.0.0.
       if (context.getters.loggedIn) {
         return new Promise(function (resolve, reject) {
           axios__WEBPACK_IMPORTED_MODULE_2___default.a.post('/logout').then(function (response) {
+            localStorage.removeItem('id');
             localStorage.removeItem('token');
             localStorage.removeItem('myname');
             localStorage.removeItem('email');
+            localStorage.removeItem('profile_image');
             context.commit('destroyToken');
             resolve(response);
           })["catch"](function (error) {
+            localStorage.removeItem('id');
             localStorage.removeItem('token');
             localStorage.removeItem('myname');
             localStorage.removeItem('email');
+            localStorage.removeItem('profile_image');
             context.commit('destroyToken');
             reject(error);
           });
@@ -63358,8 +63450,16 @@ axios__WEBPACK_IMPORTED_MODULE_2___default.a.defaults.baseURL = 'http://127.0.0.
   },
   getters: {
     loggedIn: function loggedIn(state) {
-      console.log(localStorage.getItem('myname'));
       return state.token != null;
+    },
+    loggedUserName: function loggedUserName(state) {
+      return state.myname;
+    },
+    loggedUserId: function loggedUserId(state) {
+      return state.id;
+    },
+    token: function token(state) {
+      return state.token;
     }
   }
 }));

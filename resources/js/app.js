@@ -5,12 +5,14 @@
  */
 
 require('./bootstrap');
-
 window.Vue = require('vue');
 import VeeValidate from "vee-validate";
 import VueRouter from 'vue-router';
 import routes from './routes/route';
 import store from './stote';
+axios.defaults.baseURL = 'http://127.0.0.1:8000/api'
+console.log("NEW");
+console.log(store.getters.token);
 Vue.use(VueRouter);
 Vue.use(VeeValidate)
 const router = new VueRouter({

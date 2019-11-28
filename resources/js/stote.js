@@ -4,35 +4,44 @@ import axios from 'axios'
 
 Vue.use(Vuex);
 
-axios.defaults.baseURL = 'http://127.0.0.1:8000/api'
-
 export default new Vuex.Store({
   state: {
+        id: localStorage.getItem('id') || null,
         token: localStorage.getItem('token') || null,
         myname: localStorage.getItem('myname') || null,
         email: localStorage.getItem('email') || null,
+        profile_image: localStorage.getItem('profile_image') || null,
         errorMessage: ''
   },
 
   mutations: {
     retrieveToken(state, responseData) {
+        console.log(responseData);
+        state.id = responseData.id,
         state.token = responseData.token,
-        state.myname = responseData.name,
-        state.email = responseData.email
+        state.myname = responseData.username,
+        state.email = responseData.email,
+        state.profile_image = responseData.profile_image
     },
     registerUser(state, responseData) {
+        state.id = responseData.id,
         state.token = responseData.token,
-        state.name = responseData.name,
+        state.myname = responseData.username,
         state.email = responseData.email
     },
     errorToken(state, errorMessage) {
         state.errorMessage = errorMessage
     },
     destroyToken(state) {
+        state.id = null,
         state.token = null,
-        state.name = null,
-        state.email = null
-        console.log("STATE", null);
+        state.myname = null,
+        state.email = null,
+        state.profile_image = null
+    },
+    updateProfile(state,responseData) {
+        state.myname = responseData.name,
+        state.profile_image = responseData.profile_image
     }
   },
 
@@ -45,9 +54,11 @@ export default new Vuex.Store({
           })
             .then(response => {
               const responseData = response.data.responseData;
+              localStorage.setItem('id', responseData.id)
               localStorage.setItem('token', responseData.token)
-              localStorage.setItem('myname', responseData.name)
+              localStorage.setItem('myname', responseData.username)
               localStorage.setItem('email', responseData.email)
+              localStorage.setItem('profile_image', responseData.profile_image)
               context.commit('retrieveToken', responseData)
               resolve(response);
             })
@@ -67,9 +78,11 @@ export default new Vuex.Store({
                 password_confirmation: credentials.confirm_password
             }).then(response => {
                 const responseData = response.data.responseData;
+                    localStorage.setItem('id', responseData.id)
                     localStorage.setItem('token', responseData.token)
-                    localStorage.setItem('myname', responseData.name)
+                    localStorage.setItem('myname', responseData.username)
                     localStorage.setItem('email', responseData.email)
+                    localStorage.setItem('profile_image', '')
                     context.commit('registerUser', responseData)
                     resolve(response)
             }).catch(error => {
@@ -87,16 +100,20 @@ export default new Vuex.Store({
 
             axios.post('/logout')
               .then(response => {
+                localStorage.removeItem('id')
                 localStorage.removeItem('token')
                 localStorage.removeItem('myname')
                 localStorage.removeItem('email')
+                localStorage.removeItem('profile_image')
                 context.commit('destroyToken')
                 resolve(response)
               })
               .catch(error => {
+                localStorage.removeItem('id')
                 localStorage.removeItem('token')
                 localStorage.removeItem('myname')
                 localStorage.removeItem('email')
+                localStorage.removeItem('profile_image')
                 context.commit('destroyToken')
                 reject(error)
               })
@@ -106,8 +123,16 @@ export default new Vuex.Store({
   },
   getters: {
     loggedIn(state) {
-        console.log(localStorage.getItem('myname'));
         return state.token != null;
-    }
+    },
+    loggedUserName(state) {
+      return state.myname;
+    },
+    loggedUserId(state) {
+      return state.id;
+    },
+    token(state) {
+        return state.token;
+      }
   }
 });
